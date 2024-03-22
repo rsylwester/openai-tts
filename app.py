@@ -1,4 +1,5 @@
 import os
+import random
 import sys
 from typing import Union, Literal
 
@@ -7,17 +8,41 @@ import tempfile
 
 from openai import OpenAI
 from dotenv import load_dotenv
+from pydub import AudioSegment
+
+current_path = os.environ.get('PATH')
+ffmpeg_path = '/opt/homebrew/bin'
+os.environ['PATH'] = ffmpeg_path + os.pathsep + current_path
+
+MAX_TEXT_LENGTH = 4000
 
 load_dotenv()
 
 server_name = os.getenv("SERVER_NAME", "127.0.0.1")
 openai_key = os.getenv("OPENAI_KEY")
 
+AudioSegment.converter = "/opt/homebrew/bin/ffmpeg"
+AudioSegment.ffmpeg = "/opt/homebrew/bin/ffmpeg"
+AudioSegment.ffprobe = "/opt/homebrew/bin/ffprobe"
+
 if openai_key == "<YOUR_OPENAI_KEY>":
     openai_key = ""
 
 if openai_key == "":
     sys.exit("Please Provide Your OpenAI API Key")
+
+
+def merge_audios(audio_files):
+    combined = AudioSegment.empty()
+
+    for audio_file in audio_files:
+        sound = AudioSegment.from_mp3(audio_file.name)
+        combined += sound
+
+    return combined
+
+def split_by_length(text, length):
+    return [text[i:i+length] for i in range(0, len(text), length)]
 
 
 def tts(
@@ -27,7 +52,7 @@ def tts(
         output_file_format: Literal["mp3", "opus", "aac", "flac"] = "mp3",
         speed: float = 1.0
 ):
-    if len(text) > 0:
+    if len(text) > 0 and len(text) < MAX_TEXT_LENGTH:
         try:
             client = OpenAI(api_key=openai_key)
 
@@ -50,6 +75,43 @@ def tts(
         temp_file_path = temp_file.name
 
         return temp_file_path
+    elif len(text) > MAX_TEXT_LENGTH:
+
+        texts: list = split_by_length(text, MAX_TEXT_LENGTH)
+        audio_files = list()
+
+        for (i, i_text) in enumerate(texts):
+            try:
+                client = OpenAI(api_key=openai_key)
+
+                response = client.audio.speech.create(
+                    model=model,
+                    voice=voice,
+                    input=i_text,
+                    response_format=output_file_format,
+                    speed=speed
+                )
+
+            except Exception as error:
+                print(str(error))
+                raise gr.Error(
+                    "An error occurred while generating speech. Please check your API key and come back try again.")
+
+            with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as temp_file:
+                temp_file.write(response.content)
+
+            print(f"audio_file {i}: " + temp_file.name)
+            audio_files.append(temp_file)
+
+        audio_file = merge_audios(audio_files)
+
+        home = os.path.expanduser("~")
+        downloads = os.path.join(home, 'Downloads')
+        output_file = os.path.join(downloads, f'output{random.randrange(0,10000)}.mp3')
+
+        audio_file.export(output_file, format='mp3')
+
+        return output_file
     else:
         return "1-second-of-silence.mp3"
 
