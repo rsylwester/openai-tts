@@ -1,4 +1,6 @@
-# OpenAI Text To Speech API with Gradio
+# OpenAI Text To Speech API with Web UI
+
+To manage a text with more than 4096 characters, the content would be divided into multiple sections, each with a corresponding audio file produced for it. After creating the individual audio segments, they would be merged together to form a single coherent audio file. This process ensures that the entire text, regardless of its length, can be effectively transformed into an audio format. 
 
 ## Start up Flow
 
