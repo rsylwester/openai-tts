@@ -6,24 +6,23 @@ from typing import Union, Literal
 import gradio as gr
 import tempfile
 
+import matplotlib
 from openai import OpenAI
 from dotenv import load_dotenv
 from pydub import AudioSegment
 
+load_dotenv()
+
+matplotlib.use('Agg')
+
 current_path = os.environ.get('PATH')
-ffmpeg_path = '/opt/homebrew/bin'
+ffmpeg_path = os.environ.get('FFMPEG_PATH')
 os.environ['PATH'] = ffmpeg_path + os.pathsep + current_path
 
 MAX_TEXT_LENGTH = 4000
 
-load_dotenv()
-
 server_name = os.getenv("SERVER_NAME", "127.0.0.1")
 openai_key = os.getenv("OPENAI_KEY")
-
-AudioSegment.converter = "/opt/homebrew/bin/ffmpeg"
-AudioSegment.ffmpeg = "/opt/homebrew/bin/ffmpeg"
-AudioSegment.ffprobe = "/opt/homebrew/bin/ffprobe"
 
 if openai_key == "<YOUR_OPENAI_KEY>":
     openai_key = ""
@@ -107,7 +106,9 @@ def tts(
 
         home = os.path.expanduser("~")
         downloads = os.path.join(home, 'Downloads')
+
         output_file = os.path.join(downloads, f'output{random.randrange(0,10000)}.mp3')
+        print(f"output TTS file: {output_file}")
 
         audio_file.export(output_file, format='mp3')
 
@@ -136,9 +137,3 @@ with gr.Blocks() as demo:
 
 demo.launch(server_name=server_name)
 
-# curl --location "http://127.0.0.1:7860/api/tts" \
-# --header "Content-Type: application/json" \
-# --data "{"data":["Hello", "tts-1", "alloy"]}"
-
-# curl --location "http://127.0.0.1:7860/file=/private/var/folders/5v/
-# 0b0l_t1x3752h3t1bt_rtnjr0000gn/T/gradio/e91d8bf36ee07f536bed6b5a5bf9522b1fc86436/tmpkem8ubvz.mp3"
