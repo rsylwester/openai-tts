@@ -133,19 +133,15 @@ def tts(
         logging.debug("All splits processed. Merging audio files.")
         audio_file = merge_audios(audio_files)
 
-        home = os.path.expanduser("~")
-        downloads = os.path.join(home, 'Downloads')
-
-        output_file = os.path.join(downloads, f'output{random.randrange(0,10000)}.mp3')
-        logging.debug(f"Exporting merged audio to {output_file}")
-
-        try:
-            audio_file.export(output_file, format='mp3')
-            logging.debug("Audio file exported successfully.")
-        except Exception as e:
-            logging.error(f"Error exporting audio file: {str(e)}")
-            raise gr.Error("An error occurred while exporting the audio file.")
-
+        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as temp_output_file:
+            output_file = temp_output_file.name
+            logging.debug(f"Exporting merged audio to temporary file {output_file}")
+            try:
+                audio_file.export(output_file, format='mp3')
+                logging.debug("Audio file exported successfully.")
+            except Exception as e:
+                logging.error(f"Error exporting audio file: {str(e)}")
+                raise gr.Error("An error occurred while exporting the audio file.")
         return output_file
     else:
         logging.debug("Text is empty, returning default silence audio.")
