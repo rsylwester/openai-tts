@@ -158,4 +158,16 @@ with gr.Blocks() as demo:
         voice = gr.Dropdown(choices=["alloy", "echo", "fable", "onyx", "nova", "shimmer"], label="Voice Options",
                             value="nova")
         output_file_format = gr.Dropdown(choices=["mp3", "opus", "aac", "flac"], label="Output Options", value="mp3")
-        speed = g
+        speed = gr.Slider(minimum=0.25, maximum=4.0, value=1.0, step=0.01, label="Speed")
+
+    text = gr.Textbox(label="Input text",
+                      placeholder="Enter your text and then click on the \"Text-To-Speech\" button, "
+                                  "or simply press the Enter key.")
+    btn = gr.Button("Text-To-Speech")
+    output_audio = gr.Audio(label="Speech Output")
+
+    text.submit(fn=tts, inputs=[text, model, voice, output_file_format, speed], outputs=output_audio, api_name="tts")
+    btn.click(fn=tts, inputs=[text, model, voice, output_file_format, speed], outputs=output_audio, api_name=False)
+
+logging.info("Launching Gradio app...")
+demo.launch(server_name=server_name, share=False)
