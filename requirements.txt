@@ -1,0 +1,7 @@
+ffmpeg==1.4
+ffmpy==0.4.0
+gradio==4.12.0
+gradio_client==0.8.0
+pydub==0.25.1
+python-dotenv==1.0.1
+openai

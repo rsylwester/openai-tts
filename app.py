@@ -7,7 +7,7 @@ import gradio as gr
 import tempfile
 
 import matplotlib
-from openai import OpenAI
+import openai
 from dotenv import load_dotenv
 from pydub import AudioSegment
 
@@ -21,7 +21,7 @@ os.environ['PATH'] = ffmpeg_path + os.pathsep + current_path
 
 MAX_TEXT_LENGTH = 4000
 
-server_name = os.getenv("SERVER_NAME", "127.0.0.1")
+server_name = os.getenv("SERVER_NAME", "0.0.0.0")
 openai_key = os.getenv("OPENAI_KEY")
 
 if openai_key == "<YOUR_OPENAI_KEY>":
@@ -53,9 +53,9 @@ def tts(
 ):
     if len(text) > 0 and len(text) < MAX_TEXT_LENGTH:
         try:
-            client = OpenAI(api_key=openai_key)
+            openai.api_key = openai_key
 
-            response = client.audio.speech.create(
+            response = openai.Audio.speech.create.audio.speech.create(
                 model=model,
                 voice=voice,
                 input=text,
@@ -135,5 +135,5 @@ with gr.Blocks() as demo:
     text.submit(fn=tts, inputs=[text, model, voice, output_file_format, speed], outputs=output_audio, api_name="tts")
     btn.click(fn=tts, inputs=[text, model, voice, output_file_format, speed], outputs=output_audio, api_name=False)
 
-demo.launch(server_name=server_name)
+demo.launch(server_name=server_name, share=True)
 

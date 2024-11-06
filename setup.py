@@ -15,6 +15,7 @@ setup(
         "matplotlib>=3.8.3",
         "ffmpeg>=1.4",
         "tk>=0.1.0",
+        "numpy~=1.0"
     ],
     packages=find_packages(),
 )
