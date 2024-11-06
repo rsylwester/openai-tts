@@ -123,7 +123,7 @@ with gr.Blocks() as demo:
     with gr.Row(variant="panel"):
         model = gr.Dropdown(choices=["tts-1", "tts-1-hd"], label="Model", value="tts-1")
         voice = gr.Dropdown(choices=["alloy", "echo", "fable", "onyx", "nova", "shimmer"], label="Voice Options",
-                            value="alloy")
+                            value="nova")
         output_file_format = gr.Dropdown(choices=["mp3", "opus", "aac", "flac"], label="Output Options", value="mp3")
         speed = gr.Slider(minimum=0.25, maximum=4.0, value=1.0, step=0.01, label="Speed")
 
