@@ -9,6 +9,7 @@ import tempfile
 import matplotlib
 import openai
 from dotenv import load_dotenv
+from openai import OpenAI
 from pydub import AudioSegment
 
 load_dotenv()
@@ -53,9 +54,9 @@ def tts(
 ):
     if len(text) > 0 and len(text) < MAX_TEXT_LENGTH:
         try:
-            openai.api_key = openai_key
+            client = OpenAI(api_key=openai_key)
 
-            response = openai.Audio.speech.create.audio.speech.create(
+            response = client.audio.speech.create(
                 model=model,
                 voice=voice,
                 input=text,
