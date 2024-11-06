@@ -135,5 +135,5 @@ with gr.Blocks() as demo:
     text.submit(fn=tts, inputs=[text, model, voice, output_file_format, speed], outputs=output_audio, api_name="tts")
     btn.click(fn=tts, inputs=[text, model, voice, output_file_format, speed], outputs=output_audio, api_name=False)
 
-demo.launch(server_name=server_name, share=True)
+demo.launch(server_name=server_name, share=False)
 
