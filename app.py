@@ -6,12 +6,12 @@ from typing import Union, Literal
 import gradio as gr
 import tempfile
 import logging
+import subprocess
 
 import matplotlib
 import openai
 from dotenv import load_dotenv
 from openai import OpenAI
-from pydub import AudioSegment
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -21,7 +21,7 @@ load_dotenv()
 matplotlib.use('Agg')
 
 current_path = os.environ.get('PATH')
-ffmpeg_path = os.environ.get('FFMPEG_PATH')
+ffmpeg_path = os.environ.get('FFMPEG_PATH', '')
 os.environ['PATH'] = ffmpeg_path + os.pathsep + current_path
 
 logging.debug(f"FFmpeg path set to: {ffmpeg_path}")
@@ -42,20 +42,31 @@ if openai_key == "":
 logging.debug("OpenAI API key loaded.")
 
 def merge_audios(audio_files):
-    logging.debug("Merging audio files...")
-    combined = AudioSegment.empty()
+    logging.debug("Merging audio files using ffmpeg...")
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', delete=False) as list_file:
+            for audio_file in audio_files:
+                list_file.write(f"file '{audio_file.name}'\n")
+            list_filename = list_file.name
+            logging.debug(f"List of audio files written to {list_filename}")
 
-    for audio_file in audio_files:
-        try:
-            sound = AudioSegment.from_mp3(audio_file.name)
-            combined += sound
-            logging.debug(f"Added {audio_file.name} to combined audio.")
-        except Exception as e:
-            logging.error(f"Error reading audio file {audio_file.name}: {str(e)}")
-            raise gr.Error(f"An error occurred while merging audio files: {str(e)}")
-
-    logging.debug("All audio files merged.")
-    return combined
+        output_file = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False).name
+        command = [
+            'ffmpeg', '-y', '-f', 'concat', '-safe', '0', '-i', list_filename,
+            '-c', 'copy', output_file
+        ]
+        logging.debug(f"Running command: {' '.join(command)}")
+        subprocess.run(command, check=True)
+        logging.debug("Audio files concatenated using ffmpeg.")
+    except Exception as e:
+        logging.error(f"Error during audio merging with ffmpeg: {str(e)}")
+        raise gr.Error(f"An error occurred while merging audio files: {str(e)}")
+    finally:
+        # Clean up temporary files
+        for audio_file in audio_files:
+            os.unlink(audio_file.name)
+        os.unlink(list_filename)
+    return output_file
 
 def split_by_length(text, length):
     splits = [text[i:i+length] for i in range(0, len(text), length)]
@@ -92,17 +103,17 @@ def tts(
             raise gr.Error(
                 "An error occurred while generating speech. Please check your API key and try again.")
 
-        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(suffix=f".{output_file_format}", delete=False) as temp_file:
             temp_file.write(response.content)
-            logging.debug(f"Response written to temporary file {temp_file.name}")
+            temp_file_path = temp_file.name
+            logging.debug(f"Response written to temporary file {temp_file_path}")
 
-        temp_file_path = temp_file.name
         return temp_file_path
 
     elif len(text) > MAX_TEXT_LENGTH:
         logging.debug("Text length exceeds MAX_TEXT_LENGTH, splitting text.")
         texts: list = split_by_length(text, MAX_TEXT_LENGTH)
-        audio_files = list()
+        audio_files = []
 
         for (i, i_text) in enumerate(texts):
             try:
@@ -124,24 +135,14 @@ def tts(
                 raise gr.Error(
                     "An error occurred while generating speech. Please check your API key and try again.")
 
-            with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as temp_file:
+            with tempfile.NamedTemporaryFile(suffix=f".{output_file_format}", delete=False) as temp_file:
                 temp_file.write(response.content)
                 logging.debug(f"Response for split {i+1} written to temporary file {temp_file.name}")
 
             audio_files.append(temp_file)
 
         logging.debug("All splits processed. Merging audio files.")
-        audio_file = merge_audios(audio_files)
-
-        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as temp_output_file:
-            output_file = temp_output_file.name
-            logging.debug(f"Exporting merged audio to temporary file {output_file}")
-            try:
-                audio_file.export(output_file, format='mp3')
-                logging.debug("Audio file exported successfully.")
-            except Exception as e:
-                logging.error(f"Error exporting audio file: {str(e)}")
-                raise gr.Error("An error occurred while exporting the audio file.")
+        output_file = merge_audios(audio_files)
         return output_file
     else:
         logging.debug("Text is empty, returning default silence audio.")
