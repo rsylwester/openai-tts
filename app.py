@@ -68,10 +68,66 @@ def merge_audios(audio_files):
         os.unlink(list_filename)
     return output_file
 
-def split_by_length(text, length):
-    splits = [text[i:i+length] for i in range(0, len(text), length)]
-    logging.debug(f"Text split into {len(splits)} parts.")
-    return splits
+def split_by_length(text, max_length):
+    import re
+    sentences = re.split(r'(?<=[.!?]) +', text)
+    chunks = []
+    current_chunk = ''
+
+    for sentence in sentences:
+        sentence = sentence.strip()
+        # If the sentence itself is longer than max_length, we need to split it further
+        if len(sentence) > max_length:
+            words = sentence.split()
+            sentence_parts = []
+            current_part = ''
+            for word in words:
+                if len(current_part) + len(word) + 1 <= max_length:
+                    if current_part:
+                        current_part += ' ' + word
+                    else:
+                        current_part = word
+                else:
+                    if current_part:
+                        sentence_parts.append(current_part)
+                    if len(word) <= max_length:
+                        current_part = word
+                    else:
+                        # Split the word if it's too long
+                        word_parts = [word[i:i+max_length] for i in range(0, len(word), max_length)]
+                        for wp in word_parts[:-1]:
+                            sentence_parts.append(wp)
+                        current_part = word_parts[-1]
+            if current_part:
+                sentence_parts.append(current_part)
+            # Add the sentence parts to chunks
+            for part in sentence_parts:
+                if len(current_chunk) + len(part) + 1 <= max_length:
+                    if current_chunk:
+                        current_chunk += ' ' + part
+                    else:
+                        current_chunk = part
+                else:
+                    if current_chunk:
+                        chunks.append(current_chunk)
+                    current_chunk = part
+        else:
+            # Check if adding the sentence exceeds the max_length
+            if len(current_chunk) + len(sentence) + 1 <= max_length:
+                if current_chunk:
+                    current_chunk += ' ' + sentence
+                else:
+                    current_chunk = sentence
+            else:
+                # Add the current chunk to chunks and start a new chunk with the sentence
+                if current_chunk:
+                    chunks.append(current_chunk)
+                current_chunk = sentence
+    # Add any remaining text to chunks
+    if current_chunk:
+        chunks.append(current_chunk)
+    logging.debug(f"Text split into {len(chunks)} parts.")
+    return chunks
 
 def tts(
         text: str,
